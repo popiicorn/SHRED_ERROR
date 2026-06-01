@@ -1,24 +1,21 @@
 using UnityEngine;
+using System.Collections;
 
 public class CameraShaker : MonoBehaviour
 {
-    // 揺れが続く時間（一瞬だけ揺らすので0.15秒）
+    // --- 画面シェイクの設定 ---
     public float shakeDuration = 0.15f;
-    // 揺れの強さ
     public float shakeMagnitude = 0.3f;
-
     private Vector3 originalPos;
     private float currentShakeTime = 0f;
 
     void Start()
     {
-        // ゲーム開始時のカメラの元の位置を記憶しておく
         originalPos = transform.localPosition;
     }
 
     void Update()
     {
-        // 揺れタイマーが動いている間は、カメラの位置をランダムにガタガタ動かす
         if (currentShakeTime > 0)
         {
             transform.localPosition = originalPos + Random.insideUnitSphere * shakeMagnitude;
@@ -26,14 +23,40 @@ public class CameraShaker : MonoBehaviour
         }
         else
         {
-            // 揺れが終わったら元の位置に戻す
             transform.localPosition = originalPos;
         }
     }
 
-    // ★他のプログラムから「画面を揺らせ！」と呼び出すための魔法の命令
     public void TriggerShake()
     {
         currentShakeTime = shakeDuration;
+    }
+
+    // ★【新機能】文字から呼び出されるスローモーションの命令
+    public void StartFinishSlow(float slowTime, float holdTime, float recoverTime)
+    {
+        // 途中で他のオブジェクトが消されても安全なように、カメラ自身で時間を戻す処理をスタートする
+        StartCoroutine(FinishSlowMotion(slowTime, holdTime, recoverTime));
+    }
+
+    IEnumerator FinishSlowMotion(float slowTime, float holdTime, float recoverTime)
+    {
+        // 1. スロー開始
+        Time.timeScale = slowTime;
+
+        // 2. 超スローをキープ
+        yield return new WaitForSecondsRealtime(holdTime);
+
+        // 3. じわじわ時間を戻す
+        float elapsed = 0f;
+        while (elapsed < recoverTime)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            Time.timeScale = Mathf.Lerp(slowTime, 1.0f, elapsed / recoverTime);
+            yield return null;
+        }
+
+        // 4. 通常速度に固定
+        Time.timeScale = 1.0f;
     }
 }

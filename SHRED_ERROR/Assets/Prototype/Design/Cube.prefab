@@ -124,3 +124,8 @@ MonoBehaviour:
   minSpeed: 5
   maxSpeed: 15
   effectPrefab: {fileID: 5516032452068707554, guid: bef1cb03b31a6724aadbda77401b8bcc, type: 3}
+  knockbackDistance: 4
+  maxHP: 3
+  slowTimeScale: 0.6
+  slowHoldDuration: 0.05
+  slowRecoverDuration: 0.5
