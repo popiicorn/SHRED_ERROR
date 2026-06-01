@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using TMPro; // ★TextMesh Proをプログラムでいじれるようにする魔法の呪文
 
 public class ObstacleMover : MonoBehaviour
 {
@@ -25,17 +26,36 @@ public class ObstacleMover : MonoBehaviour
     public float slowRecoverDuration = 0.5f;
 
     [Header("--- 【4】ハサミ斬撃の角度設定 ---")]
-    // ★ここがインスペクターでいじれるようになった新しい設定です！
-    [Tooltip("斬撃の最小角度（例: -45）")]
     public float minSlashAngle = -45f;
-
-    [Tooltip("斬撃の最大角度（例: 45）")]
     public float maxSlashAngle = 45f;
+
+    [Header("--- 【5】ダメージ色（ヒビ表現）の設定 ---")]
+    // ★インスペクターで段階ごとの文字の色を決められるようにします！
+    [Tooltip("無傷（HP3）のときの文字の色")]
+    public Color normalColor = Color.white;
+
+    [Tooltip("1回殴られた（HP2）ときの文字の色")]
+    public Color damagedColor1 = new Color(1f, 0.6f, 0.2f); // オレンジっぽいの
+
+    [Tooltip("2回殴られてボロボロ（HP1）のときの文字の色")]
+    public Color damagedColor2 = Color.red; // 真っ赤！
+
+    // TextMeshProのコンポーネントを記憶しておく変数
+    private TextMeshPro textMeshPro;
 
     void Start()
     {
         currentSpeed = Random.Range(minSpeed, maxSpeed);
         currentHP = maxHP;
+
+        // 自分のオブジェクトにくっついているTextMeshProを自動で見つけて持ってくる
+        textMeshPro = GetComponent<TextMeshPro>();
+
+        // 最初は通常の色にしておく
+        if (textMeshPro != null)
+        {
+            textMeshPro.color = normalColor;
+        }
     }
 
     void Update()
@@ -61,28 +81,34 @@ public class ObstacleMover : MonoBehaviour
             shaker.TriggerShake(); // 画面を揺らす
         }
 
-        // クリックした文字の場所（transform.position）に斬撃を出す
+        // 斬撃エフェクトを出す
         if (slashPrefab != null)
         {
-            // ★インスペクターで指定した「最小〜最大」の間でランダムな角度（Z軸）を決める！
             float randomAngle = Random.Range(minSlashAngle, maxSlashAngle);
-
-            // 3D空間の正面（Z軸が手前）を向いたまま、ランダムな角度にパキッと回転させる魔法の命令
             Quaternion slashRotation = Quaternion.Euler(0f, 0f, randomAngle);
 
-            // 文字の場所に、計算した角度で実体化！
             GameObject spawnedSlash = Instantiate(slashPrefab, transform.position, slashRotation);
-
-            // ★念押し対策：たまにパーティクルシステム側の設定で回転が効かないことがあるので、
-            // 生成されたエフェクト自体のTransformの角度も強制的に上書きして固定します！
             spawnedSlash.transform.rotation = slashRotation;
+        }
+
+        // ★新機能：残りHPに合わせて文字の色をリアルタイムに切り替える！
+        if (textMeshPro != null)
+        {
+            if (currentHP == 2)
+            {
+                textMeshPro.color = damagedColor1; // 1ダメージ目の色に
+            }
+            else if (currentHP == 1)
+            {
+                textMeshPro.color = damagedColor2; // 2ダメージ目（瀕死）の色に
+            }
         }
 
         if (currentHP > 0)
         {
             Debug.Log($"言葉を攻撃！ 残り耐久度: {currentHP}");
             transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z + knockbackDistance);
-            transform.localScale *= 0.8f;
+            transform.localScale *= 0.9f; // 文字がちょっと縮むリアクション
         }
         else
         {
