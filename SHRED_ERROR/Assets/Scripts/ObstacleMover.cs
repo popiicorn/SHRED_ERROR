@@ -11,6 +11,7 @@ public class ObstacleMover : MonoBehaviour
     public GameObject slashPrefab;
 
     [Header("--- 【1】ノックバックの設定 ---")]
+    [Tooltip("この文字がダメージを受けたときのノックバックの大きさ。0にすれば一切後退しません。")]
     public float knockbackDistance = 4f;
 
     [Header("--- 【2】耐久度（HP）の設定 ---")]
@@ -22,7 +23,7 @@ public class ObstacleMover : MonoBehaviour
     public float slowHoldDuration = 0.05f;
     public float slowRecoverDuration = 0.5f;
 
-    [Header("--- 【4】ハサミ斬撃の角度設定 ---")]
+    [Header("--- 【4】ハサミ斬撃の設定 ---")]
     public float minSlashAngle = -45f;
     public float maxSlashAngle = 45f;
 
@@ -31,8 +32,7 @@ public class ObstacleMover : MonoBehaviour
     public Color damagedColor1 = new Color(1f, 0.6f, 0.2f);
     public Color damagedColor2 = Color.red;
 
-    // ★今回のエラーの原因：この1行が足りていませんでした！
-    // 自分がボスかどうかの判定用（デフォルトはザコ(false)）
+    // 自分がボスかどうかの判定用
     [HideInInspector] public bool IsBoss = false;
 
     private TextMeshPro textMeshPro;
@@ -47,11 +47,12 @@ public class ObstacleMover : MonoBehaviour
 
     void Update()
     {
+        // 常に一定速度で前進
         transform.Translate(0, 0, -currentSpeed * Time.deltaTime);
+
         if (transform.position.z < -2f)
         {
             Destroy(gameObject);
-            Debug.Log("言葉を粉砕できなかった…");
         }
     }
 
@@ -59,17 +60,19 @@ public class ObstacleMover : MonoBehaviour
     {
         currentHP--;
 
+        // カメラ揺れ
         CameraShaker shaker = Camera.main.GetComponent<CameraShaker>();
         if (shaker != null) shaker.TriggerShake();
 
+        // 斬撃エフェクトの生成
         if (slashPrefab != null)
         {
             float randomAngle = Random.Range(minSlashAngle, maxSlashAngle);
             Quaternion slashRotation = Quaternion.Euler(0f, 0f, randomAngle);
             GameObject spawnedSlash = Instantiate(slashPrefab, transform.position, slashRotation);
-            spawnedSlash.transform.rotation = slashRotation;
         }
 
+        // ダメージによる色の変化
         if (textMeshPro != null)
         {
             if (currentHP == 2) textMeshPro.color = damagedColor1;
@@ -78,17 +81,14 @@ public class ObstacleMover : MonoBehaviour
 
         if (currentHP > 0)
         {
-            // ★ボスだけノックバックを少し控えめにする（巨体なので重くリアクションさせるため）
-            float actualKnockback = IsBoss ? knockbackDistance * 0.5f : knockbackDistance;
-            transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z + actualKnockback);
-
-            transform.localScale *= 0.9f;
+            // ★【修正】ノックバックの座標移動だけを実行（スケール変更は削除しました！）
+            transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z + knockbackDistance);
         }
         else
         {
+            // 破壊時
             if (effectPrefab != null) Instantiate(effectPrefab, transform.position, Quaternion.identity);
 
-            // プレハブ側に設定したフィニッシュスローがそのまま発動します！
             if (shaker != null) shaker.StartFinishSlow(slowTimeScale, slowHoldDuration, slowRecoverDuration);
 
             if (StageManager.Instance != null)
