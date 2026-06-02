@@ -72,8 +72,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4b63904b4803f349a93e1f25acdb4b6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minSpeed: 2
-  maxSpeed: 2
+  minSpeed: 8
+  maxSpeed: 8
   effectPrefab: {fileID: 5516032452068707554, guid: bef1cb03b31a6724aadbda77401b8bcc, type: 3}
   slashPrefab: {fileID: 9134247314165988566, guid: 6669e7efd79305a4fa081fee7be02dec, type: 3}
   knockbackDistance: 4
