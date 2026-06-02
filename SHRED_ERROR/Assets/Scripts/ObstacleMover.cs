@@ -1,5 +1,5 @@
 ﻿using UnityEngine;
-using TMPro; // ★TextMesh Proをプログラムでいじれるようにする魔法の呪文
+using TMPro;
 
 public class ObstacleMover : MonoBehaviour
 {
@@ -7,10 +7,7 @@ public class ObstacleMover : MonoBehaviour
     public float maxSpeed = 25f;
     private float currentSpeed;
 
-    [Tooltip("破壊したときに飛び散る『蝶』のエフェクトプレハブ")]
     public GameObject effectPrefab;
-
-    [Tooltip("クリックしたときに画面に走る『斬撃（閃光）』のエフェクトプレハブ")]
     public GameObject slashPrefab;
 
     [Header("--- 【1】ノックバックの設定 ---")]
@@ -30,42 +27,31 @@ public class ObstacleMover : MonoBehaviour
     public float maxSlashAngle = 45f;
 
     [Header("--- 【5】ダメージ色（ヒビ表現）の設定 ---")]
-    // ★インスペクターで段階ごとの文字の色を決められるようにします！
-    [Tooltip("無傷（HP3）のときの文字の色")]
     public Color normalColor = Color.white;
+    public Color damagedColor1 = new Color(1f, 0.6f, 0.2f);
+    public Color damagedColor2 = Color.red;
 
-    [Tooltip("1回殴られた（HP2）ときの文字の色")]
-    public Color damagedColor1 = new Color(1f, 0.6f, 0.2f); // オレンジっぽいの
+    // ★今回のエラーの原因：この1行が足りていませんでした！
+    // 自分がボスかどうかの判定用（デフォルトはザコ(false)）
+    [HideInInspector] public bool IsBoss = false;
 
-    [Tooltip("2回殴られてボロボロ（HP1）のときの文字の色")]
-    public Color damagedColor2 = Color.red; // 真っ赤！
-
-    // TextMeshProのコンポーネントを記憶しておく変数
     private TextMeshPro textMeshPro;
 
     void Start()
     {
         currentSpeed = Random.Range(minSpeed, maxSpeed);
         currentHP = maxHP;
-
-        // 自分のオブジェクトにくっついているTextMeshProを自動で見つけて持ってくる
         textMeshPro = GetComponent<TextMeshPro>();
-
-        // 最初は通常の色にしておく
-        if (textMeshPro != null)
-        {
-            textMeshPro.color = normalColor;
-        }
+        if (textMeshPro != null) textMeshPro.color = normalColor;
     }
 
     void Update()
     {
         transform.Translate(0, 0, -currentSpeed * Time.deltaTime);
-
         if (transform.position.z < -2f)
         {
             Destroy(gameObject);
-            Debug.Log("言葉を粉砕できなかった…（激突）");
+            Debug.Log("言葉を粉砕できなかった…");
         }
     }
 
@@ -73,55 +59,41 @@ public class ObstacleMover : MonoBehaviour
     {
         currentHP--;
 
-        // カメラのコンポーネントを取得
         CameraShaker shaker = Camera.main.GetComponent<CameraShaker>();
+        if (shaker != null) shaker.TriggerShake();
 
-        if (shaker != null)
-        {
-            shaker.TriggerShake(); // 画面を揺らす
-        }
-
-        // 斬撃エフェクトを出す
         if (slashPrefab != null)
         {
             float randomAngle = Random.Range(minSlashAngle, maxSlashAngle);
             Quaternion slashRotation = Quaternion.Euler(0f, 0f, randomAngle);
-
             GameObject spawnedSlash = Instantiate(slashPrefab, transform.position, slashRotation);
             spawnedSlash.transform.rotation = slashRotation;
         }
 
-        // ★新機能：残りHPに合わせて文字の色をリアルタイムに切り替える！
         if (textMeshPro != null)
         {
-            if (currentHP == 2)
-            {
-                textMeshPro.color = damagedColor1; // 1ダメージ目の色に
-            }
-            else if (currentHP == 1)
-            {
-                textMeshPro.color = damagedColor2; // 2ダメージ目（瀕死）の色に
-            }
+            if (currentHP == 2) textMeshPro.color = damagedColor1;
+            else if (currentHP == 1) textMeshPro.color = damagedColor2;
         }
 
         if (currentHP > 0)
         {
-            Debug.Log($"言葉を攻撃！ 残り耐久度: {currentHP}");
-            transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z + knockbackDistance);
-            transform.localScale *= 0.9f; // 文字がちょっと縮むリアクション
+            // ★ボスだけノックバックを少し控えめにする（巨体なので重くリアクションさせるため）
+            float actualKnockback = IsBoss ? knockbackDistance * 0.5f : knockbackDistance;
+            transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z + actualKnockback);
+
+            transform.localScale *= 0.9f;
         }
         else
         {
-            Debug.Log("言葉を完全に粉砕した！");
+            if (effectPrefab != null) Instantiate(effectPrefab, transform.position, Quaternion.identity);
 
-            if (effectPrefab != null)
-            {
-                Instantiate(effectPrefab, transform.position, Quaternion.identity);
-            }
+            // プレハブ側に設定したフィニッシュスローがそのまま発動します！
+            if (shaker != null) shaker.StartFinishSlow(slowTimeScale, slowHoldDuration, slowRecoverDuration);
 
-            if (shaker != null)
+            if (StageManager.Instance != null)
             {
-                shaker.StartFinishSlow(slowTimeScale, slowHoldDuration, slowRecoverDuration);
+                StageManager.Instance.OnObstacleDestroyed();
             }
 
             Destroy(gameObject);
