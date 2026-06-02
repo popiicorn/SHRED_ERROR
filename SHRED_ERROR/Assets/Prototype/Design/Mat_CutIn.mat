@@ -43,7 +43,7 @@ Material:
     m_Floats:
     - _Float: 20
     - _GlitchAmount: 0
-    - _MosaicSize: 50
+    - _MosaicSize: 100
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

@@ -111,6 +111,7 @@ public class StageManager : MonoBehaviour
         // 3. ボスを満を持して生成！
         if (bossPrefab != null)
         {
+            // インスペクターで指定した「開始位置」に生成
             GameObject boss = Instantiate(bossPrefab, bossStartPos, Quaternion.identity);
 
             ObstacleMover bossMover = boss.GetComponent<ObstacleMover>();
@@ -119,7 +120,18 @@ public class StageManager : MonoBehaviour
                 bossMover.IsBoss = true;
             }
 
-            // 4. ボスの専用登場アクション
+            // ★ インスペクターで設定した「タメの時間（間）」をじっくり待つ
+            yield return new WaitForSeconds(bossSpawnDelay);
+
+            // ★【ここが核心！】タメの時間が終わったら、子要素から「Boss_Image」という名前のオブジェクトをピンポイントで探す
+            Transform bossImageTransform = boss.transform.Find("Boss_Image");
+            if (bossImageTransform != null)
+            {
+                // 非アクティブ（暗黒）だったボスのイラストを、ここで初めてアクティブ（ON）に叩き起こす！！！
+                bossImageTransform.gameObject.SetActive(true);
+            }
+
+            // 4. ボスの専用登場アクション（ここからドォン！と動き出します）
             StartCoroutine(BossEntranceAnimation(boss.transform));
         }
     }

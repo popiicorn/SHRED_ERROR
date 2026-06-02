@@ -87,6 +87,8 @@ MonoBehaviour:
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   damagedColor1: {r: 1, g: 0.6, b: 0.2, a: 1}
   damagedColor2: {r: 1, g: 0, b: 0, a: 1}
+  glitchAmount: 0
+  mosaicSize: 100
   IsBoss: 0
 --- !u!23 &2544547808520666148
 MeshRenderer:
@@ -245,7 +247,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &6328369757951024714
 Transform:
   m_ObjectHideFlags: 0

@@ -1,34 +1,50 @@
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.UI; // UI（RawImage）を触るためのお守り
 
 public class MaterialBridge : MonoBehaviour
 {
-    // Animatorから動かしたい数値
-    [Range(0, 1)] public float glitchAmount;
-    public float mosaicSize = 30;
+    [Range(0, 1)] public float glitchAmount = 0f;
+    public float mosaicSize = 100f;
 
-    private Material targetMaterial;
+    // UI用と3D用の両方のパーツの入れ物を用意しておく
     private RawImage rawImage;
+    private SpriteRenderer spriteRenderer;
+    private Material runtimeMaterial;
 
-    void Start()
+    void OnEnable()
     {
+        // 1. まずは「UI（RawImage）」がついているかチェック
         rawImage = GetComponent<RawImage>();
-        if (rawImage != null)
+        if (rawImage != null && rawImage.material != null)
         {
-            // マテリアルを複製して「このオブジェクト専用」にする（元のファイルを汚さないため）
-            targetMaterial = Instantiate(rawImage.material);
-            rawImage.material = targetMaterial;
+            if (runtimeMaterial != null) Destroy(runtimeMaterial);
+            runtimeMaterial = new Material(rawImage.material);
+            rawImage.material = runtimeMaterial;
+            return; // UIが見つかったらここで処理を抜ける
+        }
+
+        // 2. UIがなければ「3D（SpriteRenderer）」がついているかチェック
+        spriteRenderer = GetComponent<SpriteRenderer>();
+        if (spriteRenderer != null && spriteRenderer.material != null)
+        {
+            if (runtimeMaterial != null) Destroy(runtimeMaterial);
+            runtimeMaterial = new Material(spriteRenderer.material);
+            spriteRenderer.material = runtimeMaterial;
         }
     }
 
     void Update()
     {
-        if (targetMaterial != null)
+        // 動いている数値をマテリアルに流し込む（UI・3D共通）
+        if (runtimeMaterial != null)
         {
-            // 変数の数値をシェーダーに送り込む
-            // ※Shader Graphで作った「Reference」の名前と一致させる必要があります
-            targetMaterial.SetFloat("_GlitchAmount", glitchAmount);
-            targetMaterial.SetFloat("_MosaicSize", mosaicSize);
+            runtimeMaterial.SetFloat("_GlitchAmount", glitchAmount);
+            runtimeMaterial.SetFloat("_MosaicSize", mosaicSize);
         }
+    }
+
+    void OnDisable()
+    {
+        if (runtimeMaterial != null) Destroy(runtimeMaterial);
     }
 }

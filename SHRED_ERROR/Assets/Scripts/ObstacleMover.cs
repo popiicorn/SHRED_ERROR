@@ -32,10 +32,17 @@ public class ObstacleMover : MonoBehaviour
     public Color damagedColor1 = new Color(1f, 0.6f, 0.2f);
     public Color damagedColor2 = Color.red;
 
+    [Header("--- 【新規】アニメーション同期用の変数 ---")]
+    // ★Animatorからはマテリアルではなく、この「表面の数値」を直接録画してもらいます！
+    [Range(0, 1)] public float glitchAmount = 0f;
+    public float mosaicSize = 100f;
+
     // 自分がボスかどうかの判定用
     [HideInInspector] public bool IsBoss = false;
 
     private TextMeshPro textMeshPro;
+    private SpriteRenderer spriteRenderer;
+    private Material runtimeMaterial;
 
     void Start()
     {
@@ -43,12 +50,26 @@ public class ObstacleMover : MonoBehaviour
         currentHP = maxHP;
         textMeshPro = GetComponent<TextMeshPro>();
         if (textMeshPro != null) textMeshPro.color = normalColor;
+
+        spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+        if (spriteRenderer != null && spriteRenderer.material != null)
+        {
+            // マテリアルを安全に複製
+            runtimeMaterial = new Material(spriteRenderer.material);
+            spriteRenderer.material = runtimeMaterial;
+        }
     }
 
     void Update()
     {
-        // 常に一定速度で前進
         transform.Translate(0, 0, -currentSpeed * Time.deltaTime);
+
+        // ★【超重要】毎フレーム、Animatorが動かしている「表面の数値」をマテリアルの奥底に送り込む！
+        if (runtimeMaterial != null)
+        {
+            runtimeMaterial.SetFloat("_GlitchAmount", glitchAmount);
+            runtimeMaterial.SetFloat("_MosaicSize", mosaicSize);
+        }
 
         if (transform.position.z < -2f)
         {
@@ -60,11 +81,9 @@ public class ObstacleMover : MonoBehaviour
     {
         currentHP--;
 
-        // カメラ揺れ
         CameraShaker shaker = Camera.main.GetComponent<CameraShaker>();
         if (shaker != null) shaker.TriggerShake();
 
-        // 斬撃エフェクトの生成
         if (slashPrefab != null)
         {
             float randomAngle = Random.Range(minSlashAngle, maxSlashAngle);
@@ -72,21 +91,24 @@ public class ObstacleMover : MonoBehaviour
             GameObject spawnedSlash = Instantiate(slashPrefab, transform.position, slashRotation);
         }
 
-        // ダメージによる色の変化
         if (textMeshPro != null)
         {
             if (currentHP == 2) textMeshPro.color = damagedColor1;
             else if (currentHP == 1) textMeshPro.color = damagedColor2;
         }
 
+        if (spriteRenderer != null)
+        {
+            if (currentHP == 2) spriteRenderer.color = damagedColor1;
+            else if (currentHP == 1) spriteRenderer.color = damagedColor2;
+        }
+
         if (currentHP > 0)
         {
-            // ★【修正】ノックバックの座標移動だけを実行（スケール変更は削除しました！）
             transform.position = new Vector3(transform.position.x, transform.position.y, transform.position.z + knockbackDistance);
         }
         else
         {
-            // 破壊時
             if (effectPrefab != null) Instantiate(effectPrefab, transform.position, Quaternion.identity);
 
             if (shaker != null) shaker.StartFinishSlow(slowTimeScale, slowHoldDuration, slowRecoverDuration);
@@ -95,6 +117,8 @@ public class ObstacleMover : MonoBehaviour
             {
                 StageManager.Instance.OnObstacleDestroyed();
             }
+
+            if (runtimeMaterial != null) Destroy(runtimeMaterial);
 
             Destroy(gameObject);
         }
