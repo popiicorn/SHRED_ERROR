@@ -126,18 +126,17 @@ public class JustSliceObstacle3D : MonoBehaviour
 
     void OnMouseDown()
     {
+        // すでに死んでいるか、演出中なら何もしない
         if (currentHP <= 0 || isDestroying) return;
 
-        if (isJustTiming)
-        {
-            ProcessDamage();
-        }
-        else
+        // 【変更】チャンスの瞬間（晴れてる時）でも、ノイズの時でも、叩けば確実にダメージを通す！
+        ProcessDamage();
+
+        // もしノイズ中だったら、ペナルティとしてログを出したりプレイヤーに損害を与える
+        if (!isJustTiming)
         {
             playerHP -= 10;
-            Debug.Log($"<color=red>【BLOCK!!】 ノイズに弾かれた！</color>");
-            CameraShaker shaker = Camera.main.GetComponent<CameraShaker>();
-            if (shaker != null) shaker.TriggerShake();
+            Debug.Log($"<color=orange>【BAD!!】 タイミングがズレてるけどダメージは与えた！</color>");
         }
     }
 
