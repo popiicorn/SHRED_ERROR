@@ -30,8 +30,8 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _CutAngle: -0.09
-    - _CutSide: 1
+    - _CutAngle: 0
+    - _CutSide: 0
     - _IsDestroyed: 1
     m_Colors: []
   m_BuildTextureStacks: []
