@@ -30,9 +30,11 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
+    - _Boolean: 0
     - _CutAngle: 0
     - _CutSide: 0
     - _IsDestroyed: 1
+    - _MosaicSize: 40.3
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1
