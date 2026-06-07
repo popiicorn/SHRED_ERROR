@@ -33,8 +33,10 @@ Material:
     - _Boolean: 0
     - _CutAngle: 0
     - _CutSide: 0
+    - _GlitchAmount: 1
     - _IsDestroyed: 1
-    - _MosaicSize: 40.3
+    - _MosaicSize: 14.6
+    - _NoiseSwitch: 0
     m_Colors: []
   m_BuildTextureStacks: []
   m_AllowLocking: 1

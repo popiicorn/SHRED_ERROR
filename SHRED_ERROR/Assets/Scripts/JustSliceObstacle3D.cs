@@ -48,14 +48,17 @@ public class JustSliceObstacle3D : MonoBehaviour
     [Tooltip("ハサミで斬る角度の最大値（例：35）")]
     [SerializeField] private float maxSlashAngle = 35f;
 
-    [Tooltip("★【n秒】真っ二つに弾け飛んでから、モザイク消滅が始まるまでの待機時間")]
+    [Tooltip("①【弾け飛ぶ時間】パーツがパカッと外側に開ききるまでの時間（秒）")]
+    [SerializeField] private float popDuration = 0.15f;
+
+    [Tooltip("②【タメ時間】真っ二つに弾け飛んでから、消滅の進行が始まるまでの待機時間（秒）")]
     [SerializeField] private float delayBeforeMosaic = 0.5f;
 
-    [Tooltip("真っ過つになったパーツが外側にパカッと弾け飛ぶ距離")]
-    [SerializeField] private float popDistance = 0.6f;
-
-    [Tooltip("断面からシュワシュワ消え去るまでの時間（秒）")]
+    [Tooltip("③【消滅時間】断面からシュワシュワ消え去るまでの時間（秒）")]
     [SerializeField] private float destroyDuration = 0.8f;
+
+    [Tooltip("真っ二つになったパーツが外側にパカッと弾け飛ぶ距離")]
+    [SerializeField] private float popDistance = 0.6f;
 
     private Material matUpper;
     private Material matLower;
@@ -68,17 +71,14 @@ public class JustSliceObstacle3D : MonoBehaviour
         currentSpeed = Random.Range(minSpeed, maxSpeed);
         currentHP = maxHP;
 
-        // インスペクターで設定した文字の色だけを適用します。
         if (textMeshUpper != null) textMeshUpper.color = Color.white;
         if (textMeshLower != null) textMeshLower.color = Color.white;
 
-        // TextMeshProの一番下にある自作フォントマテリアルを取得
         if (textMeshUpper != null) matUpper = textMeshUpper.fontMaterial;
         if (textMeshLower != null) matLower = textMeshLower.fontMaterial;
 
-        // 最初は切断モードをOFF、消滅進行度を通常(0)にしておく
-        if (matUpper != null) { matUpper.SetFloat("_IsDestroyed", 0f); matUpper.SetFloat("_DestroyProgress", 0f); }
-        if (matLower != null) { matLower.SetFloat("_IsDestroyed", 0f); matLower.SetFloat("_DestroyProgress", 0f); }
+        if (matUpper != null) { matUpper.SetFloat("_IsDestroyed", 0f); matUpper.SetFloat("_DestroyProgress", 0f); matUpper.SetFloat("_NoiseSwitch", 0f); }
+        if (matLower != null) { matLower.SetFloat("_IsDestroyed", 0f); matLower.SetFloat("_DestroyProgress", 0f); matLower.SetFloat("_NoiseSwitch", 0f); }
 
         StartCoroutine(WordStateLoop());
     }
@@ -126,13 +126,10 @@ public class JustSliceObstacle3D : MonoBehaviour
 
     void OnMouseDown()
     {
-        // すでに死んでいるか、演出中なら何もしない
         if (currentHP <= 0 || isDestroying) return;
 
-        // 【変更】チャンスの瞬間（晴れてる時）でも、ノイズの時でも、叩けば確実にダメージを通す！
         ProcessDamage();
 
-        // もしノイズ中だったら、ペナルティとしてログを出したりプレイヤーに損害を与える
         if (!isJustTiming)
         {
             playerHP -= 10;
@@ -147,7 +144,6 @@ public class JustSliceObstacle3D : MonoBehaviour
         CameraShaker shaker = Camera.main.GetComponent<CameraShaker>();
         if (shaker != null) shaker.TriggerShake();
 
-        // ★【限定対応】インスペクターで指定された min〜max の範囲で角度をランダム決定
         float randomSlashAngle = Random.Range(minSlashAngle, maxSlashAngle);
 
         if (slashPrefab != null)
@@ -174,8 +170,9 @@ public class JustSliceObstacle3D : MonoBehaviour
 
     IEnumerator AnimateSlashAndBlockDestroy(float slashAngle)
     {
-        if (matUpper != null) { matUpper.SetFloat("_IsDestroyed", 1f); matUpper.SetFloat("_CutAngle", slashAngle); matUpper.SetFloat("_CutSide", 1f); }
-        if (matLower != null) { matLower.SetFloat("_IsDestroyed", 1f); matLower.SetFloat("_CutAngle", slashAngle); matLower.SetFloat("_CutSide", -1f); }
+        // 1. 斬った瞬間にノイズスイッチをオン！
+        if (matUpper != null) { matUpper.SetFloat("_IsDestroyed", 1f); matUpper.SetFloat("_CutAngle", slashAngle); matUpper.SetFloat("_CutSide", 1f); matUpper.SetFloat("_NoiseSwitch", 1f); }
+        if (matLower != null) { matLower.SetFloat("_IsDestroyed", 1f); matLower.SetFloat("_CutAngle", slashAngle); matLower.SetFloat("_CutSide", -1f); matLower.SetFloat("_NoiseSwitch", 1f); }
 
         Vector3 slashDirection = Quaternion.Euler(0, 0, slashAngle) * Vector3.up;
 
@@ -185,28 +182,58 @@ public class JustSliceObstacle3D : MonoBehaviour
         Vector3 targetLowerPos = startLowerPos - (slashDirection * popDistance);
 
         float popElapsed = 0f;
-        float popDuration = 0.15f;
 
+        // 2. パカッと弾け飛ぶ（インスペクターの popDuration でループします）
         while (popElapsed < popDuration)
         {
             popElapsed += Time.deltaTime;
-            float t = Mathf.Sin((popElapsed / popDuration) * Mathf.PI * 0.5f);
+            // 0除算を防ぐ安全対策
+            float currentPopDuration = popDuration > 0f ? popDuration : 0.01f;
+            float t = Mathf.Sin((popElapsed / currentPopDuration) * Mathf.PI * 0.5f);
 
             textMeshUpper.transform.localPosition = Vector3.Lerp(startUpperPos, targetUpperPos, t);
             textMeshLower.transform.localPosition = Vector3.Lerp(startLowerPos, targetLowerPos, t);
+
+            float randomMosaicSize = Random.Range(mosaicMin, mosaicMax);
+            if (matUpper != null) matUpper.SetFloat("_MosaicSize", randomMosaicSize);
+            if (matLower != null) matLower.SetFloat("_MosaicSize", randomMosaicSize);
+
             yield return null;
         }
 
-        yield return new WaitForSeconds(delayBeforeMosaic);
+        // 3. 弾け飛んだ状態で静止する（タメ）時間（インスペクターの delayBeforeMosaic でループします）
+        float waitElapsed = 0f;
+        while (waitElapsed < delayBeforeMosaic)
+        {
+            waitElapsed += Time.deltaTime;
 
+            float randomMosaicSize = Random.Range(mosaicMin, mosaicMax);
+            if (matUpper != null) matUpper.SetFloat("_MosaicSize", randomMosaicSize);
+            if (matLower != null) matLower.SetFloat("_MosaicSize", randomMosaicSize);
+
+            yield return null;
+        }
+
+        // 4. 消滅進行度を進めつつ、モザイクサイズを動かす（インスペクターの destroyDuration でループします）
         float elapsed = 0f;
         while (elapsed < destroyDuration)
         {
             elapsed += Time.deltaTime;
-            float progress = Mathf.Clamp01(elapsed / destroyDuration);
+            float currentDestroyDuration = destroyDuration > 0f ? destroyDuration : 0.01f;
+            float progress = Mathf.Clamp01(elapsed / currentDestroyDuration);
 
-            if (matUpper != null) matUpper.SetFloat("_DestroyProgress", progress);
-            if (matLower != null) matLower.SetFloat("_DestroyProgress", progress);
+            float randomMosaicSize = Random.Range(mosaicMin, mosaicMax);
+
+            if (matUpper != null)
+            {
+                matUpper.SetFloat("_DestroyProgress", progress);
+                matUpper.SetFloat("_MosaicSize", randomMosaicSize);
+            }
+            if (matLower != null)
+            {
+                matLower.SetFloat("_DestroyProgress", progress);
+                matLower.SetFloat("_MosaicSize", randomMosaicSize);
+            }
 
             yield return null;
         }
